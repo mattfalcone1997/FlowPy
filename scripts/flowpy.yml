@@ -1,0 +1,32 @@
+name: flowpy
+channels:
+  - defaults
+  - conda-forge
+  - anaconda
+dependencies:
+  - python=3.9
+  - numpy
+  - pandas
+  - matplotlib
+  - scipy
+  - h5py
+  - pyvista
+  - sympy
+  - ipython
+  - imageio-ffmpeg
+  - conda-build
+  - seaborn
+  - pip
+  - cython
+  - sphinx
+  - sphinx_rtd_theme
+  - scikit-image
+  - cycler
+  - ez_setup
+  - moviepy
+  - decorator
+  - virtualenv
+  - pytables
+  - pyfftw
+  - scp
+  - paramiko

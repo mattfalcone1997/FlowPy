@@ -245,7 +245,10 @@ class coordstruct(datastruct):
 
         index_list=[]
         for coord in coord_list:
-            if coord < min_coord or coord > max_coord:
+            
+            if min_coord == max_coord:
+                index_list = [0]   
+            elif coord < min_coord or coord > max_coord:
                 end_threshold = abs(coords[-1] - coords[-2])
                 start_threshold = abs(coords[1] - coords[0])
                 

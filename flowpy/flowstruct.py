@@ -718,7 +718,8 @@ class FlowStructND(_FlowStruct_base):
 
         translation = np.array(translation)
         self.CoordDF.Translate(translation[reorder][coord_order])
-        self.Coord_ND_DF.Translate(translation[reorder][coord_order])
+        if self.Coord_ND_DF is not None:
+            self.Coord_ND_DF.Translate(translation[reorder][coord_order])
             
     def to_vtk(self,file_name: str):
         """
@@ -1882,9 +1883,10 @@ class FlowStruct1D_time(FlowStruct1D,FlowStructND_time):
 
     def plot_line_time(self,comp,coords,transform_ydata=None, transform_xdata=None, labels=None,fig=None,ax=None,line_kw=None,**kwargs):
         fstruct_t = self.to_ND()
+        coords = check_list_vals(coords)
 
         for i, y in enumerate(coords):
-            fstruct_y = fstruct_t.slice[y]
+            fstruct_y = fstruct_t.slice[y,:]
             label = labels[i] if labels is not None else None
             fig, ax = fstruct_y.plot_line(comp,
                                        transform_ydata=transform_ydata,

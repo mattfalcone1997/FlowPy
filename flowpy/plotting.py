@@ -629,25 +629,28 @@ def subplots(nrows=1, ncols=1, sharex=False, sharey=False, squeeze=True, subplot
 
 def _default_update_new(name,type_kw,**kwargs):
     if type_kw is None:
-        type_kw = {}
-    elif not isinstance(type_kw,dict):
+        kw = {}
+    elif isinstance(type_kw,dict):
+        kw = type_kw.copy()
+    else:
         raise TypeError(f"{name} needs to be a dictionary")
 
     for key, val in kwargs.items():
-        if key not in type_kw.keys():
-            type_kw[key] = val    
+        if key not in kw.keys():
+            kw[key] = val    
 
-    return type_kw
+    return kw
 
 def _default_update_replace(name,type_kw,**kwargs):
     if type_kw is None:
-        type_kw = {}
+        kw = {}
+    elif isinstance(type_kw,dict):
+        kw = type_kw.copy()
     elif not isinstance(type_kw,dict):
         raise TypeError(f"{name} needs to be a dictionary")
 
-    type_kw.update(kwargs)
-
-    return type_kw
+    kw.update(kwargs)
+    return kw
 
 def update_pcolor_kw(pcolor_kw,**kwargs):
     

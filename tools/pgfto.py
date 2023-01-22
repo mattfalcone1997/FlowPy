@@ -465,17 +465,20 @@ class PgfTo:
 
         os.chdir(self._tempdir.name)
 
-        t = gettempprefix()
-        self._texSys.set_filename(t+'.tex')
+        t = NamedTemporaryFile(suffix='.tex',dir=self._tempdir.name)
+        t_prefix = os.path.splitext(t.name)[0]
+
+        self._texSys.set_filename(t.name)
         
         out = self._texSys.run_latex(self._texGen)
 
         if out.returncode != 0:
-            copy(t+'.log',os.path.join(cwd,base_fn+'.log')) 
+            copy(t_prefix+'.log',os.path.join(cwd,base_fn+'.log')) 
 
-        copy(t+'.pdf',os.path.join(root,base_fn + '.pdf'))
+        copy(t_prefix+'.pdf',os.path.join(root,base_fn + '.pdf'))
         os.chdir(cwd)
 
     def __del__(self):
-        self._tempdir.cleanup()
+        if hasattr(self,'_temp_dir'):
+            self._tempdir.cleanup()
 

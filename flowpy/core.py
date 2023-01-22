@@ -569,20 +569,60 @@ class datastruct(_StructMath):
         index_array = hdf_obj.contruct_index_from_hdfkey('index')
         shapes_array = hdf_obj['shapes'][:]
         
+        fill_func = self._fill_check(hdf_obj)
+        if 'ndims' in hdf_obj.attrs.keys():
+            ndims = np.array(hdf_obj.attrs['ndims'])
+        else:
+            ndims =np.full(shapes_array.shape[0],shapes_array.shape[-1])
+        
         self._data = [None for _ in range(len(data_array))] 
-        for i, (data,shape) in enumerate(zip(data_array,shapes_array)):
-            self._data[i] = data[~np.isnan(data)].reshape(shape).squeeze()
+        if self._require_fill(shapes_array):
+            for i, (data,shape) in enumerate(zip(data_array,shapes_array)):
+                self._data[i] = data[~fill_func(data)].reshape(shape[:ndims[i]])
+        else:
+            for i, (data,shape) in enumerate(zip(data_array,shapes_array)):
+                self._data[i] = data.reshape(shape[:ndims[i]])
 
         self._indexer = structIndexer(index_array)
         return hdf_obj
 
+    def _require_fill(self,shapes):
+        for shape in shapes[1:]:
+            if not np.array_equal(shapes[0],shape):
+                return True
+            
+        return False
+    
+    def _fill_check(self,h5_obj):
+        if not 'fill_val' in h5_obj.attrs:
+            return np.isnan
+        
+        fill = h5_obj.attrs['fill_val']
+        
+        def isneginf(x: np.ndarray):
+            if issubclass(x.dtype.type,np.complexfloating):
+                return np.logical_or(np.isneginf(x.real),np.isneginf(x.imag))
+            else:
+                return np.isneginf(x)
+            
+        if np.isnan(fill):
+            return np.isnan
+        elif np.isneginf(fill):
+            return isneginf
+        else:
+            raise Exception("Need to add more fill values. Big sad.")
+
+        
     def to_hdf(self,filepath,mode='a',key=None):
         hdf_obj =hdfHandler(filepath,mode=mode,key=key)
 
-        hdf_array = self._construct_data_array()
+        fill_val = self._get_fill_val()
         hdf_shapes = self._construct_shapes_array()
+        hdf_array = self._construct_data_array(fill_val,hdf_shapes)
         hdf_indices = self._indexer.to_array(string=True)
 
+        hdf_obj.attrs['fill_val'] = fill_val
+        hdf_obj.attrs['ndims'] = np.array([a.ndim for a in self._data])
         hdf_obj.create_dataset('data',data=hdf_array)
         hdf_obj.create_dataset('shapes',data=hdf_shapes)
         hdf_obj.create_dataset('index',data=hdf_indices)
@@ -606,7 +646,19 @@ class datastruct(_StructMath):
         return out
                 
             
-            
+    def _get_fill_val(self):
+        def isneginf(x: np.ndarray):
+            if issubclass(x.dtype.type,np.complexfloating):
+                return np.logical_or(np.isneginf(x.real),np.isneginf(x.imag))
+            else:
+                return np.isneginf(x)
+                
+        if not any(np.isnan(d).any() for d in self._data):
+            return np.nan
+        elif not any(isneginf(d).any() for d in self._data):
+            return np.NINF
+        else:
+            raise Exception("Need to add more fill values. Big sad.")
         
     def _construct_shapes_array(self):
         shapes =  [x.shape for _,x in self]
@@ -619,16 +671,21 @@ class datastruct(_StructMath):
                 shapes[i] = [*shape,*extra_shape]
         return np.array(shapes)
 
-    def _construct_data_array(self):
-        array = [x.flatten() for _,x in self]
-        sizes = [x.size for x in array]
-        max_size = max(sizes)
-        outer_size = len(array)
+    def _construct_data_array(self,fill_val,shapes):
 
-        dtype = self._get_dtype(array[0])
-        data_array = np.full((outer_size,max_size),np.nan,dtype=dtype)
-        for i, arr in enumerate(array):
-            data_array[i,:arr.size] = arr
+        if self._require_fill(shapes):
+            array = [x.flatten() for _,x in self]
+            sizes = [x.size for x in array]
+            max_size = max(sizes)
+            outer_size = len(array)
+
+            dtype = self._get_dtype(array[0])
+            data_array = np.full((outer_size,max_size),fill_val,dtype=dtype)
+            for i, arr in enumerate(array):
+                data_array[i,:arr.size] = arr
+        else:
+            shape =(len(self.index),self._data[0].size)
+            data_array = self.values.reshape(shape)
 
         return data_array
 

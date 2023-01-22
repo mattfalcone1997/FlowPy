@@ -3,7 +3,7 @@ from pathlib import PurePath
 import numpy as np
 import warnings
 from scipy import stats
-
+from numbers import Number
 # from CHAPSim_post import rcParams
 
 __all__ = ["max_time_calc","time_extract",'Params']
@@ -154,11 +154,12 @@ def max_time_calc(path_to_folder,abs_path=True):
     return max_time
 
 def check_list_vals(x_list):
-    msg =  f"x_list must be of type float, int, or an iterable of them not %s"%type(x_list)
-    if isinstance(x_list,(float,int,np.floating)):
+    msg =  ("x_list must be a number or an iterable "
+            f"of numbers not {type(x_list).__name__}")
+    if isinstance(x_list,Number):
         x_list=[x_list]
     elif hasattr(x_list,'__iter__'):
-        if not all([isinstance(x,(float,int,np.floating)) for x in x_list]):
+        if not all([isinstance(x,Number) for x in x_list]):
             raise TypeError(msg)
     else: # x_list is a tuple or list
         raise TypeError(msg)

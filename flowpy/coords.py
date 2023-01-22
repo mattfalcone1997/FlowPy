@@ -203,6 +203,18 @@ class coordstruct(datastruct):
         else: 
             return None
 
+    def Translate(self,**args):
+        for key in args:
+            if key in self.index:
+                self[key] += args[key]
+            else:
+                raise KeyError("Invalid direction specfied "
+                               "(%s). Directions %s "%(key,self.index))
+                
+    def Rescale(self,val):
+        for key in self.index:
+            self[key] /= val 
+            
     def _get_subdomain_lims(self,xmin=None,xmax=None,ymin=None,ymax=None,zmin=None,zmax=None):
         if xmin is None:
             xmin = np.amin(self['x'])
@@ -282,15 +294,6 @@ class coordstruct(datastruct):
         coord_set = set(list('xyz'))
         coord = "".join(coord_set.difference(slice_set))
         return plane, coord
-    
-    def Translate(self,translation):
-        if not len(translation) == len(self.index):
-            msg = ("Length of translation vector must"
-                   " be the same as the coordstruct dimension")
-            raise ValueError(msg)
-    
-        for i,comp in enumerate(self.index):
-            self[comp] += translation[i]
             
     def check_line(self,line):
         if line not in self.index:

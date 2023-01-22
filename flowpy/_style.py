@@ -104,5 +104,5 @@ def update_default_style(flow_type,params):
     if flow_type not in [PIPE,CHANNEL,BLAYER]:
         raise ValueError("Invalid flow tyle")
 
-    dict.update(_defaults,params)
+    dict.update(_defaults[flow_type],params)
     

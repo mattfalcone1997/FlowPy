@@ -203,13 +203,13 @@ class _FlowStruct_base(datastruct):
         Tuple
             Shape of the array
         """
-        key = self.index[0]
-        return self[key].shape
+        return self._data[0].shape
 
     def _dstruct_ini(self, coorddata, dstruct, copy=False):
         self._dict_ini(coorddata, dstruct.to_dict(), copy=copy)
 
     def _set_coorddata(self,file_or_coorddata,**kwargs):
+
         if isinstance(file_or_coorddata,AxisData):
             self._coorddata = file_or_coorddata.copy()
         else:
@@ -713,13 +713,16 @@ class FlowStructND(_FlowStruct_base):
                    " be the same as the FlowStruct dimension")
             raise ValueError(msg)
         
-        reorder = np.argsort(self._data_layout)
-        coord_order = np.arange(self._dim)[np.argsort(self.CoordDF.index)]
+        args = dict(zip(self._data_layout,translation))
 
-        translation = np.array(translation)
-        self.CoordDF.Translate(translation[reorder][coord_order])
+        self.CoordDF.Translate(**args)
         if self.Coord_ND_DF is not None:
-            self.Coord_ND_DF.Translate(translation[reorder][coord_order])
+            self.Coord_ND_DF.Translate(**args)
+    
+    def Coord_rescale(self,val):
+        self.CoordDF.Rescale(val)
+        if self.Coord_ND_DF is not None:
+            self.Coord_ND_DF.Rescale(val)
             
     def to_vtk(self,file_name: str):
         """
@@ -818,6 +821,9 @@ class FlowStructND(_FlowStruct_base):
             raise Exception
         
         
+        if len(data_layout) != len(self.shape):
+            raise Exception("data layout different to extracted array shape. "
+                            "Layout: %s. Shape: %s"%(data_layout,self.shape))
 
             
         for i, data in enumerate(data_layout):
@@ -1718,8 +1724,10 @@ class FlowStruct2D(FlowStructND):
 
     def plot_line(self,comp,axis,coords,time=None,labels=None,transform_ydata=None, transform_xdata=None, channel_half=False,fig=None,ax=None,line_kw=None,**kwargs):
         coords = check_list_vals(coords)
+
         if labels is None:
             labels = [None]*len(coords)
+
         for coord,label in zip(coords,labels):
            slicer = self._calculate_line(axis,coord)  
            flowstruct = self.slice[slicer]

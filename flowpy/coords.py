@@ -31,6 +31,10 @@ class GeomHandler(StyleHandler):
     def is_channel(self):
         return self._geomTYPE == CHANNEL
 
+    @property
+    def is_blayer(self):
+        return self._geomTYPE == BLAYER
+    
     def __str__(self):
         if self.is_channel:
             name = "channel"

@@ -410,11 +410,11 @@ class PgfTo:
         self._texGen.add_command(endgroup)
 
         self._texSys = texSystem(latex_cmd=latex_cmd)
-            
-        if not isinstance(dependent_files,list):
-            raise TypeError("Dependent files must be of type list")
-        elif dependent_files is None:
+        
+        if dependent_files is None:
             dependent_files = []
+        elif not isinstance(dependent_files,list):
+            raise TypeError("Dependent files must be of type list")
 
         for file in dependent_files:
             if not os.path.isfile(file):

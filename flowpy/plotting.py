@@ -800,5 +800,8 @@ def _upgrade_ax(fig,ax):
 def get_legend_ncols(line_no):
     return 4 if line_no >3 else line_no
 
+def show(*args,**kwargs):
+    plt.show(*args,**kwargs)
+
 def close(*args,**kwargs):
     plt.close(*args,**kwargs)

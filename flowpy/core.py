@@ -570,7 +570,9 @@ class datastruct(_StructMath):
         shapes_array = hdf_obj['shapes'][:]
         
         fill_func = self._fill_check(hdf_obj)
-        if 'ndims' in hdf_obj.attrs.keys():
+        if 'ndims' in hdf_obj.keys():
+            ndims = hdf_obj['ndims'][:]
+        elif 'ndims' in hdf_obj.attrs.keys():
             ndims = np.array(hdf_obj.attrs['ndims'])
         else:
             ndims =np.full(shapes_array.shape[0],shapes_array.shape[-1])
@@ -622,7 +624,8 @@ class datastruct(_StructMath):
         hdf_indices = self._indexer.to_array(string=True)
 
         hdf_obj.attrs['fill_val'] = fill_val
-        hdf_obj.attrs['ndims'] = np.array([a.ndim for a in self._data])
+        hdf_obj.create_dataset('ndims',
+                               data= np.array([a.ndim for a in self._data]))
         hdf_obj.create_dataset('data',data=hdf_array)
         hdf_obj.create_dataset('shapes',data=hdf_shapes)
         hdf_obj.create_dataset('index',data=hdf_indices)
@@ -750,7 +753,6 @@ class datastruct(_StructMath):
             raise KeyError(msg)
 
         key = self._indexer._item_handler(key)
-
         try:
             return self.get_key(key)
         except KeyError:

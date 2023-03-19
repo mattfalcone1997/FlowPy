@@ -18,7 +18,7 @@ from shutil import which
 
 import matplotlib.tri as mtri
 from scipy.interpolate import interp1d
-
+from .utils import find_stack_level
 try:
     from skimage import measure
     _has_isosurface = True
@@ -26,7 +26,7 @@ except ImportError:
     _has_isosurface = False
     msg = ("An issue importing skimage for creating isosurfaces,"
            " this has been disabled")
-    warnings.warn(msg)
+    warnings.warn(msg,stack_level=find_stack_level())
 
 
 if which('pdflatex') is not None:
@@ -497,7 +497,7 @@ class FlowAxes(mpl.axes.Axes):
                     except ValueError:
                         if j == len(list_string[i])-1:
                             msg="Legend label not compatible with this function"
-                            warnings.warn(msg+": %s"%string,stacklevel=2)
+                            warnings.warn(msg+": %s"%string,stacklevel=find_stack_level())
                             return string
                         continue
         string = "".join(list_string)
@@ -614,7 +614,7 @@ def flip_leg_col(items, ncol):
 
 def figure(*args,**kwargs):
     if 'FigureClass' in kwargs.keys():
-        warnings.warn("FigureClass keyword overriden with FlowFigure\n")
+        warnings.warn("FigureClass keyword overriden with FlowFigure\n",stacklevel=find_stack_level())
     kwargs['FigureClass'] = FlowFigure
     return plt.figure(*args,**kwargs)
 

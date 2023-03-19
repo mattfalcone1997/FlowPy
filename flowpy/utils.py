@@ -4,9 +4,10 @@ import numpy as np
 import warnings
 from scipy import stats
 from numbers import Number
+import inspect
 # from CHAPSim_post import rcParams
 
-__all__ = ["max_time_calc","time_extract",'Params']
+__all__ = ["max_time_calc","time_extract",'Params',"find_stack_level"]
 
 class Params:
     def __init__(self):
@@ -43,14 +44,14 @@ class Params:
                     return key, value
                 else:
                     msg = "There are no CUDA GPUs available"
-                    warnings.warn(msg)
+                    warnings.warn(msg,stacklevel=find_stack_level())
                     return key, False
             else:
                 return key, value 
         except (ImportError, ModuleNotFoundError):
             msg = ('There has been a problem import CuPy'
                    ' check installation this has been deactivated')
-            warnings.warn(msg)
+            warnings.warn(msg,stacklevel=find_stack_level())
             return key, False
             
     
@@ -90,7 +91,32 @@ def check_paths(path_to_folder,*folder_options):
 
     msg = "Directory(ies) %s cannot be found in path: %s"%(folder_options,path_to_folder)
     raise FileNotFoundError(msg)
-    
+
+
+def find_stack_level(package=None) -> int:
+    """
+    Find the first place in the stack that is not inside pandas
+    (tests notwithstanding).
+    """
+
+    if package is None:
+        import flowpy as fp
+        package = fp
+
+    pkg_dir = os.path.dirname(package.__file__)
+
+    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
+    frame = inspect.currentframe()
+    n = 0
+    while frame:
+        fname = inspect.getfile(frame)
+        if fname.startswith(pkg_dir):
+            frame = frame.f_back
+            n += 1
+        else:
+            break
+    return n
+
 def check_path_exists(file_folder_path,check_file=None):
     
     if check_file is None:

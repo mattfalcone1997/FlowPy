@@ -30,7 +30,8 @@ from .plotting import (FlowFigure,
                        update_quiver_kw)
 
 from .utils import (check_list_vals,
-                    meshgrid)
+                    meshgrid,
+                    find_stack_level)
 
 from ._api import sub                    
 
@@ -40,6 +41,7 @@ from .coords import coordstruct, AxisData
 from .core import Index, datastruct
 from .io import hdfHandler
 
+import warnings
 import numpy as np
 import numbers
 import os
@@ -98,7 +100,11 @@ class _FlowStruct_base(datastruct):
         Shifts all the FlowStruct's times by a scalar
         """
         
-        times = self.times.copy()
+        if time_shift < 0:
+            times = self.times.copy()
+        else:
+            times = self.times[::-1].copy()
+            
         for time in times:
             self.index.update_outer_key(time,time+time_shift)
 
@@ -1550,6 +1556,37 @@ class FlowStructND_time(FlowStructND):
         kwargs.update(kwarg_dict)
         return FlowStructND_time(self._coorddata,*args,**kwargs)
     
+    def window(self,method,*args,**kwargs):
+        if method == 'uniform':
+            data = self._window_uniform(*args,**kwargs)            
+        else:
+            raise NotImplementedError("Window method not implemented")
+            
+
+        return self.from_internal(data,index=self.index)
+    
+    def _window_uniform(self,hwidth):
+        times = self.times
+        if not all(np.diff(times)>hwidth):
+            warnings.warn("All times are not spaced "
+                            f"larger than hwidth ({hwidth})",
+                            stack_level=find_stack_level())
+        
+        shape = (len(self.index,*self,shape))
+        data = np.zeros(shape,dtype=self.dtype)
+        
+        i = 0
+        for time in times:
+            all_times = [t for t in self.times \
+                            if abs(t-time) < hwidth]
+            
+            for comp in self.inner_index:
+                for t1 in all_times:
+                    data[i] += self[t1,comp]
+                data[i]/=len(all_times)
+                i+=1
+                
+        return data
 class FlowStruct3D(FlowStructND):  
     """
     A core class for storing and visualising full 3D datasets 

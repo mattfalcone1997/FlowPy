@@ -8,7 +8,7 @@ from scipy import io
 from numbers import Number
 
 from ._api import rcParams
-
+from .utils import find_stack_level
 class hdfHandler:
 
     _available_ext = ['.h5','.hdf5']
@@ -112,7 +112,7 @@ class hdfHandler:
 
         if module != type_m:
             msg = "The calling modules do match the HDF type id"
-            warnings.warn(msg)
+            warnings.warn(msg,stacklevel=find_stack_level())
             
 
     def set_type_id(self,class_obj):

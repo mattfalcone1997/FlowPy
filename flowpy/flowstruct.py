@@ -40,7 +40,7 @@ from .vtk import VTKstruct2D, VTKstruct3D
 from .coords import coordstruct, AxisData
 from .core import Index, datastruct
 from .io import hdfHandler
-
+from itertools import product
 import warnings
 import numpy as np
 import numbers
@@ -71,6 +71,10 @@ class _FlowStruct_base(datastruct):
         """
         return self._coorddata._domain_handler
 
+    @property
+    def dtype(self):
+        return self._data[0].dtype
+    
     @property
     def CoordDF(self):
         """
@@ -1563,27 +1567,28 @@ class FlowStructND_time(FlowStructND):
             raise NotImplementedError("Window method not implemented")
             
 
-        return self.from_internal(data,index=self.index)
+        inner = self.inner_index
+        outer = self.outer_index
+        index = list(product(outer,inner))
+        return self.from_internal(data,index=index)
     
     def _window_uniform(self,hwidth):
         times = self.times
-        if not all(np.diff(times)>hwidth):
+        if not all(np.diff(times)<hwidth):
             warnings.warn("All times are not spaced "
-                            f"larger than hwidth ({hwidth})",
-                            stack_level=find_stack_level())
+                            f"smaller than hwidth ({hwidth})",
+                            stacklevel=find_stack_level())
         
-        shape = (len(self.index,*self,shape))
+        shape = (len(self.index),*self.shape)
         data = np.zeros(shape,dtype=self.dtype)
         
         i = 0
         for time in times:
             all_times = [t for t in self.times \
                             if abs(t-time) < hwidth]
-            
             for comp in self.inner_index:
-                for t1 in all_times:
-                    data[i] += self[t1,comp]
-                data[i]/=len(all_times)
+                data[i] = self[all_times,comp].values.mean(axis=0)
+            
                 i+=1
                 
         return data

@@ -26,7 +26,7 @@ except ImportError:
     _has_isosurface = False
     msg = ("An issue importing skimage for creating isosurfaces,"
            " this has been disabled")
-    warnings.warn(msg,stack_level=find_stack_level())
+    warnings.warn(msg,stacklevel=find_stack_level())
 
 
 if which('pdflatex') is not None:

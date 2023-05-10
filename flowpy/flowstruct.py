@@ -38,7 +38,8 @@ from ._api import sub
 import matplotlib as mpl
 from .vtk import VTKstruct2D, VTKstruct3D
 from .coords import coordstruct, AxisData
-from .core import Index, datastruct
+from .core import datastruct
+from .index import Index
 from .io import hdfHandler
 from itertools import product
 import warnings
@@ -55,7 +56,8 @@ class _FlowStruct_base(datastruct):
     def __init__(self,*args,from_hdf=False,**kwargs):
         
         self._set_coorddata(args[0],**kwargs)
-            
+        self.attrs = kwargs.get('attrs',{})
+
         if isinstance(args[0],AxisData):
             args = args[1:]
             
@@ -512,145 +514,6 @@ class _FlowStruct_base(datastruct):
         """
         cls = self.__class__
         return cls(self._coorddata,self.to_dict(),copy=True)
-
-class _FlowStruct_slicer:
-    def __init__(self,flowstruct_obj):
-        self._ref = flowstruct_obj
-
-    def get_slicer(self,key):
-        output_slice, _ = self._get_index_slice(key)
-        return output_slice
-    
-    def __getitem__(self,key):
-        if self._ref._dim == 1:
-            key = (key)
-        
-        flow_struct = self._ref.copy()
-        output_slice, output_slice_nd = self._get_index_slice(key)
-
-        new_coorddata, data_layout,\
-        wall_normal_line, polar_plane = self._get_new_coorddata(output_slice,
-                                                                 output_slice_nd)
-        
-        new_array = []
-        for array in flow_struct._data:
-            new_array.append(array[output_slice].squeeze())
-        new_array = np.stack(new_array,axis=0)
-        
-        kwds = dict(data_layout = data_layout,
-                    wall_normal_line = wall_normal_line,
-                    polar_plane = polar_plane)
-
-        cls = self._get_output_class(new_array)
-        kwds = self._arg_handler(cls,kwds)
-
-        return cls(new_coorddata,
-                                    new_array,
-                                    index=flow_struct.index,
-                                    **kwds)
-
-    def _get_output_class(self,array):
-        dim = array.ndim - 1
-        if self._ref._dim != dim:
-            return FlowStructND
-        else:
-            return self._ref.__class__
-
-    def _arg_handler(self, cls, kwargs):
-        low_level_args = ('data_layout',
-                          'wall_normal_line',
-                          'polar_plane')
-
-        if cls == FlowStructND or \
-            cls == FlowStructND_time:
-                return kwargs
-
-        for key in low_level_args:
-            del kwargs[key]
-
-        return kwargs
-        
-    def _get_index_slice(self,key):
-        output_slicer = []
-        output_slicer_nd = []
-        flow_struct = self._ref
-        data_layout = flow_struct._data_layout
-
-        extra_slices =[slice(None)]*(len(data_layout) - len(key))
-        for k, data in zip(key,data_layout):
-            if isinstance(k,slice):
-                if k.start is None:
-                    start = None
-                else:
-                    start = flow_struct.CoordDF.index_calc(data,k.start)[0]
-                if k.stop is None:
-                    stop = None; stop_nd = None
-                else:
-                    stop = flow_struct.CoordDF.index_calc(data,k.stop)[0]
-                    stop_nd = stop + 1
-
-                if k.step is not None:
-                    msg = "Patterns cannot be provided to the flowstruct slicer"
-                output_slicer.append(slice(start,stop))
-                output_slicer_nd.append(slice(start,stop_nd))
-
-            else:
-                stop = flow_struct.CoordDF.index_calc(data,k)[0]
-                output_slicer.append(slice(stop,stop+1))
-                if flow_struct.Coord_ND_DF is not None:
-                    stop_nd = flow_struct.Coord_ND_DF.index_calc(data,k)[0]
-                    output_slicer_nd.append(slice(stop_nd,stop_nd+1))
-        
-        output_slicer.extend(extra_slices)
-        output_slicer = tuple(output_slicer)
-        
-        if flow_struct.Coord_ND_DF is not None:
-            output_slicer_nd.extend(extra_slices)
-            output_slicer_nd = tuple(output_slicer_nd)
-        else:
-            output_slicer_nd = None
-        return output_slicer, output_slicer_nd
-
-
-    def _get_new_coorddata(self,output_slice, output_slice_nd):
-        flow_struct = self._ref
-        CoordDF = flow_struct.CoordDF
-        Coord_ND_DF = flow_struct.Coord_ND_DF
-
-        new_nd_dict = {}
-        new_dict = {}
-        data_layout = []
-        for i, data in enumerate(flow_struct._data_layout):
-            coord = CoordDF[data][output_slice[i]]
-            if len(coord) == 1:
-                continue
-            
-            data_layout.append(data)
-            new_dict[data] = coord
-            if Coord_ND_DF is not None:
-                coord_nd = Coord_ND_DF[data][output_slice_nd[i]]
-                new_nd_dict[data] = coord_nd
-        
-        if flow_struct._wall_normal_line not in data_layout:
-            wall_normal_line = None
-        else:
-            wall_normal_line = flow_struct._wall_normal_line
-
-        if flow_struct._polar_plane is not None:
-            if all(axis in data_layout for axis in flow_struct._polar_plane):
-                polar_plane = flow_struct._polar_plane
-            else:
-                polar_plane = None
-        else:
-            polar_plane = None
-
-        
-        new_CoordDF = coordstruct(new_dict)
-        new_Coord_ND_DF = coordstruct(new_nd_dict) if Coord_ND_DF is not None else None
-        new_coorddata = AxisData(flow_struct.Domain,new_CoordDF,new_Coord_ND_DF)
-
-        return new_coorddata, data_layout, wall_normal_line, polar_plane
-
 slicer_example = """
 Example using FlowStructND.slice
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -665,9 +528,7 @@ If I wanted to create a FlowStruct with only y_values from -1 to 0:
     fstruct_half =fstruct.slice[:,:0,:]
     
 """
-
 sub.update(slicer=slicer_example)
-
 
 class FlowStructND(_FlowStruct_base):
     """
@@ -776,6 +637,8 @@ class FlowStructND(_FlowStruct_base):
             hdf_obj.attrs['polar_plane'] = np.array(self._polar_plane,dtype=np.string_)
         if self._wall_normal_line is not None:
             hdf_obj.attrs['wall_normal_line'] = str(self._wall_normal_line)
+        for k, v in self.attrs.items():
+            hdf_obj.attrs[k] = v
         hdf_obj.attrs['data_layout'] = np.array(self._data_layout,dtype=np.string_)
         
         
@@ -794,15 +657,16 @@ class FlowStructND(_FlowStruct_base):
         self._set_coorddata(filename,key=key)
 
         data_layout = list(x.decode('utf-8') for x in hdf_obj.attrs['data_layout'])
-        if 'polar_plane' in hdf_obj.attrs:
-            polar_plane = list(x.decode('utf-8') for x in hdf_obj.attrs['polar_plane'])
-        else:
-            polar_plane = None
-
-        if 'wall_normal_line' in hdf_obj.attrs:
-            wall_normal_line = hdf_obj.attrs['wall_normal_line']
-        else:
-            wall_normal_line = None
+        polar_plane = None
+        wall_normal_line = None
+        self.attrs = {}
+        for key in hdf_obj.attrs:
+            if key == 'polar_plane':
+                polar_plane = list(x.decode('utf-8') for x in hdf_obj.attrs['polar_plane'])
+            elif key == 'wall_normal_line':
+                wall_normal_line = hdf_obj.attrs['wall_normal_line']
+            else:
+                self.attrs[key] = hdf_obj.attrs[key]
 
         self._set_data_layout(data_layout, wall_normal_line, polar_plane)
         
@@ -1354,7 +1218,7 @@ class FlowStructND(_FlowStruct_base):
 
     @sub
     @property
-    def slice(self) -> _FlowStruct_slicer:
+    def slice(self):
         """
         Returns an object that can be sliced using the coordinates 
         of the data:
@@ -1979,6 +1843,144 @@ class FlowStruct1D_time(FlowStruct1D,FlowStructND_time):
 
         return fig, ax
 
+class _FlowStruct_slicer:
+    def __init__(self,flowstruct_obj):
+        self._ref = flowstruct_obj
+
+    def get_slicer(self,key):
+        output_slice, _ = self._get_index_slice(key)
+        return output_slice
+    
+    def __getitem__(self,key) -> FlowStructND:
+        if self._ref._dim == 1:
+            key = (key)
+        
+        flow_struct = self._ref.copy()
+        output_slice, output_slice_nd = self._get_index_slice(key)
+
+        new_coorddata, data_layout,\
+        wall_normal_line, polar_plane = self._get_new_coorddata(output_slice,
+                                                                 output_slice_nd)
+        
+        new_array = []
+        for array in flow_struct._data:
+            new_array.append(array[output_slice].squeeze())
+        new_array = np.stack(new_array,axis=0)
+        
+        kwds = dict(data_layout = data_layout,
+                    wall_normal_line = wall_normal_line,
+                    polar_plane = polar_plane)
+
+        cls = self._get_output_class(new_array)
+        kwds = self._arg_handler(cls,kwds)
+
+        return cls(new_coorddata,
+                                    new_array,
+                                    index=flow_struct.index,
+                                    **kwds)
+
+    def _get_output_class(self,array):
+        dim = array.ndim - 1
+        if self._ref._dim != dim:
+            return FlowStructND
+        else:
+            return self._ref.__class__
+
+    def _arg_handler(self, cls, kwargs):
+        low_level_args = ('data_layout',
+                          'wall_normal_line',
+                          'polar_plane')
+
+        if cls == FlowStructND or \
+            cls == FlowStructND_time:
+                return kwargs
+
+        for key in low_level_args:
+            del kwargs[key]
+
+        return kwargs
+        
+    def _get_index_slice(self,key):
+        output_slicer = []
+        output_slicer_nd = []
+        flow_struct = self._ref
+        data_layout = flow_struct._data_layout
+
+        extra_slices =[slice(None)]*(len(data_layout) - len(key))
+        for k, data in zip(key,data_layout):
+            if isinstance(k,slice):
+                if k.start is None:
+                    start = None
+                else:
+                    start = flow_struct.CoordDF.index_calc(data,k.start)[0]
+                if k.stop is None:
+                    stop = None; stop_nd = None
+                else:
+                    stop = flow_struct.CoordDF.index_calc(data,k.stop)[0]
+                    stop_nd = stop + 1
+
+                if k.step is not None:
+                    msg = "Patterns cannot be provided to the flowstruct slicer"
+                output_slicer.append(slice(start,stop))
+                output_slicer_nd.append(slice(start,stop_nd))
+
+            else:
+                stop = flow_struct.CoordDF.index_calc(data,k)[0]
+                output_slicer.append(slice(stop,stop+1))
+                if flow_struct.Coord_ND_DF is not None:
+                    stop_nd = flow_struct.Coord_ND_DF.index_calc(data,k)[0]
+                    output_slicer_nd.append(slice(stop_nd,stop_nd+1))
+        
+        output_slicer.extend(extra_slices)
+        output_slicer = tuple(output_slicer)
+        
+        if flow_struct.Coord_ND_DF is not None:
+            output_slicer_nd.extend(extra_slices)
+            output_slicer_nd = tuple(output_slicer_nd)
+        else:
+            output_slicer_nd = None
+        return output_slicer, output_slicer_nd
+
+
+    def _get_new_coorddata(self,output_slice, output_slice_nd):
+        flow_struct = self._ref
+        CoordDF = flow_struct.CoordDF
+        Coord_ND_DF = flow_struct.Coord_ND_DF
+
+        new_nd_dict = {}
+        new_dict = {}
+        data_layout = []
+        for i, data in enumerate(flow_struct._data_layout):
+            coord = CoordDF[data][output_slice[i]]
+            if len(coord) == 1:
+                continue
+            
+            data_layout.append(data)
+            new_dict[data] = coord
+            if Coord_ND_DF is not None:
+                coord_nd = Coord_ND_DF[data][output_slice_nd[i]]
+                new_nd_dict[data] = coord_nd
+        
+        if flow_struct._wall_normal_line not in data_layout:
+            wall_normal_line = None
+        else:
+            wall_normal_line = flow_struct._wall_normal_line
+
+        if flow_struct._polar_plane is not None:
+            if all(axis in data_layout for axis in flow_struct._polar_plane):
+                polar_plane = flow_struct._polar_plane
+            else:
+                polar_plane = None
+        else:
+            polar_plane = None
+
+        
+        new_CoordDF = coordstruct(new_dict)
+        new_Coord_ND_DF = coordstruct(new_nd_dict) if Coord_ND_DF is not None else None
+        new_coorddata = AxisData(flow_struct.Domain,new_CoordDF,new_Coord_ND_DF)
+
+        return new_coorddata, data_layout, wall_normal_line, polar_plane
+
         
     # def plot_line_time_data_max(self,data,transform_ydata=None, transform_xdata=None, fig=None,ax=None,line_kw=None,**kwargs):
 
@@ -1995,3 +1997,4 @@ class FlowStruct1D_time(FlowStruct1D,FlowStructND_time):
     #     ax.cplot(transform_xdata(times),transform_ydata(max_data),**line_kw)
 
     #     return fig, ax
+

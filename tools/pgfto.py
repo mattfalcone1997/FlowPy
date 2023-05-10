@@ -319,7 +319,7 @@ def parse_output(subprocess_out):
     if subprocess_out.returncode != 0:
 
         msg = (f"{subprocess_out.args[0]} failed with the following"
-                " error message:\n %s"% subprocess_out.stderr)
+                " error message:\n %s"% subprocess_out.stderr.decode('ASCII'))
         raise RuntimeError(msg)
 
 def run_dvips(input_fn,output_fn):
@@ -478,7 +478,4 @@ class PgfTo:
         copy(t_prefix+'.pdf',os.path.join(root,base_fn + '.pdf'))
         os.chdir(cwd)
 
-    def __del__(self):
-        if hasattr(self,'_temp_dir'):
-            self._tempdir.cleanup()
 

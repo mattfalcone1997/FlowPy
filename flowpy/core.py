@@ -14,15 +14,10 @@ import numpy as np
 import numbers
 import copy
 
-from pandas._libs.index import ObjectEngine
-import pandas as pd
-from pandas.core.indexes.multi import MultiIndexPyIntEngine, MultiIndexUIntEngine
-
-from abc import abstractmethod, abstractproperty, ABC
+from abc import abstractmethod
 from .io import hdfHandler
 from ._api import rcParams
 from .utils import find_stack_level
-from typing import Iterable
 from .index import structIndexer
 
 # from .coords import AxisData

@@ -1432,7 +1432,7 @@ class FlowStructND_time(FlowStructND):
             
 
         inner = self.inner_index
-        outer = self.outer_index
+        outer = self.times
         index = list(product(outer,inner))
         return self.from_internal(data,index=index)
     
@@ -1447,9 +1447,8 @@ class FlowStructND_time(FlowStructND):
         data = np.zeros(shape,dtype=self.dtype)
         
         i = 0
-        for time in times:
-            all_times = [t for t in self.times \
-                            if abs(t-time) < hwidth]
+        for time in sorted(times):
+            all_times = list(times[np.abs(times-time)<hwidth])
             for comp in self.inner_index:
                 data[i] = self[all_times,comp].values.mean(axis=0)
             

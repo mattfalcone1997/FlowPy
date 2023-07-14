@@ -15,6 +15,8 @@ from .io import *
 from .core import datastruct, metastruct
 from .gradient import Grad_calc
 from ._api import rcParams
+from .backend_pgf_class import update_rcParams
+update_rcParams()
 from ._style import (get_default_style,
                      get_style_params,
                      set_default_style)

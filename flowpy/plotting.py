@@ -725,9 +725,11 @@ def _check__mpl_kwargs(artist,kwargs):
         
 def create_fig_ax_with_squeeze(fig=None,ax=None,**kwargs):
 
-    if fig is None:
+    if fig is None and ax is None:
         fig, ax = subplots(**kwargs)
-    elif ax is None:
+    elif fig is None and ax is not None:
+        fig = ax.figure
+    elif fig is not None and ax is None:
         ax=fig.add_subplot(1,1,1)
     else:
         fig = _upgrade_fig(fig)
@@ -739,11 +741,22 @@ def create_fig_ax_with_squeeze(fig=None,ax=None,**kwargs):
     
 def create_fig_ax_without_squeeze(*args,fig=None,ax=None,**kwargs):
     kwargs['squeeze'] = False
-    if fig is None:
+    msg = ("Axes provided to method must be of type "
+                    f"{mpl.axes.Axes.__name__}  or an iterable"
+                    f" of it not {type(ax)}")
+    
+    if fig is None and ax is None:
         fig, ax = subplots(*args,**kwargs)
-    elif ax is None:
+    elif fig is not None and ax is None:
         kwargs.pop('figsize',None)
         ax=fig.subplots(*args,**kwargs)
+    elif fig is None and ax is not None:
+        if isinstance(ax,mpl.axes.Axes):
+            fig = ax.figure
+        elif all([isinstance(a,mpl.axes.Axes) for a in np.array(ax).flatten()]):
+            fig = np.array(ax).flatten()[0].figure
+        else:   
+            raise TypeError(msg)
     
     fig = _upgrade_fig(fig)
     
@@ -751,12 +764,9 @@ def create_fig_ax_without_squeeze(*args,fig=None,ax=None,**kwargs):
     if isinstance(ax,mpl.axes.Axes):
         ax = np.array([ax])
         single_input = True
-    elif all([isinstance(a,mpl.axes.Axes) for a in ax.flatten()]):
+    elif all([isinstance(a,mpl.axes.Axes) for a in np.array(ax).flatten()]):
         ax = np.array(ax)
-    else:   
-        msg = ("Axes provided to method must be of type "
-                f"{mpl.axes.Axes.__name__}  or an iterable"
-                f" of it not {type(ax)}")
+    else:
         raise TypeError(msg)
     
     ax = ax.flatten()

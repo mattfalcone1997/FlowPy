@@ -1061,18 +1061,18 @@ class FlowStructND(_FlowStruct_base):
         plane = self._data_layout
 
         if rotate:
-            comps[1] = self.check_comp(comps[0])
-            comps[0] = self.check_comp(comps[1])
+            comps1 = self.check_comp(comps[0])
+            comps2 = self.check_comp(comps[1])
             coord_2 = self.CoordDF[plane[0]][::spacing[0]]
             coord_1 = self.CoordDF[plane[1]][::spacing[1]]
         else:
-            comps[0] = self.check_comp(comps[0])
-            comps[1] = self.check_comp(comps[1])
+            comps1 = self.check_comp(comps[0])
+            comps2 = self.check_comp(comps[1])
             coord_1 = self.CoordDF[plane[0]][::spacing[0]]
             coord_2 = self.CoordDF[plane[1]][::spacing[1]]
 
-        U = self[time,comps[0]][::spacing[0],::spacing[1]]
-        V = self[time,comps[1]][::spacing[0],::spacing[1]]
+        U = self[time,comps1][::spacing[0],::spacing[1]]
+        V = self[time,comps2][::spacing[0],::spacing[1]]
 
         coord_1_mesh, coord_2_mesh = np.meshgrid(coord_1,coord_2)
         scale = np.amax(U[:,:])*coord_1.size/np.amax(coord_1)/scaling

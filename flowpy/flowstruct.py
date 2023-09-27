@@ -39,7 +39,7 @@ import matplotlib as mpl
 from .vtk import VTKstruct2D, VTKstruct3D
 from .coords import coordstruct, AxisData
 from .core import datastruct
-from .index import Index
+from .index import Index, structIndexer
 from .io import hdfHandler
 from itertools import product
 import warnings

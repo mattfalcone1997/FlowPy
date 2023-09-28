@@ -26,17 +26,6 @@ else:
 FigureManager = FigureManagerPgf
 
 
-def _validate_docclass(s: str):
-    docclass = s + '.cls'
-    if not shutil.which('kpsewhich'):
-        raise LatexError("kpsewhich not found")
-
-    cmds = ['kpsewhich', docclass]
-    out = run(cmds, capture_output=True)
-    if not out.stdout:
-        raise ValueError("Latex document class not found")
-
-
 def _validate_preamble(s: str):
     if s is None:
         return
@@ -49,7 +38,7 @@ def _validate_preamble(s: str):
 
 
 def update_rcParams():
-    _new_validators = {"pgf.document_class": _validate_docclass,
+    _new_validators = {"pgf.document_class": validate_string,
                        "pgf.preamble_file": _validate_preamble}
     rcParams.validate.update(_new_validators)
     rcParams["pgf.document_class"] = 'article'
@@ -80,6 +69,14 @@ class FigureCanvas(FigureCanvasPgf):
             if not shutil.which("pdftops"):
                 raise RuntimeError(f"Format {self.filetypes[fmt]} requires "
                                    "requires pdftops to be installed")
+
+        if not shutil.which('kpsewhich'):
+            raise LatexError("kpsewhich not found")
+
+        cmds = ['kpsewhich', doc_class + '.cls']
+        out = run(cmds, capture_output=True)
+        if not out.stdout:
+            raise LatexError("Latex document class not found")
 
         if rcParams['pgf.preamble_file'] is not None:
             preamble_input = r"\input{%s}" % rcParams['pgf.preamble_file']

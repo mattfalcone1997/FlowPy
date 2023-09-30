@@ -161,7 +161,7 @@ class _FlowStruct_base(datastruct):
         return return_transforms
 
     @property
-    def times(self) -> Union[List[float], None]:
+    def times(self) -> Union[np.ndarray[np.float64], None]:
         """
 
         Returns a list of the FlowStruct's times or None
@@ -1435,13 +1435,11 @@ class FlowStructND_time(FlowStructND):
 
     def window(self, method, *args, **kwargs):
         if method == 'uniform':
-            data = self._window_uniform(*args, **kwargs)
+            data, index = self._window_uniform(*args, **kwargs)
         else:
             raise NotImplementedError("Window method not implemented")
 
-        inner = self.inner_index
-        outer = self.times
-        index = list(product(outer, inner))
+        print(index)
         return self.from_internal(data, index=index)
 
     def _window_uniform(self, hwidth, **kwargs):
@@ -1453,16 +1451,19 @@ class FlowStructND_time(FlowStructND):
 
         shape = (len(self.index), *self.shape)
         data = np.zeros(shape, dtype=self.dtype)
+        original_data = self.values
 
         i = 0
-        for time in sorted(times):
-            all_times = list(times[np.abs(times-time) < hwidth])
-            for comp in self.inner_index:
-                data[i] = self[all_times, comp].values.mean(axis=0)
-
+        for time in times:
+            all_times = list(times[np.abs(times-float(time)) <= hwidth])
+            for comp in self.comp:
+                indices = product(all_times, [comp])
+                indexer = [self._indexer.get_loc(index) for index in indices]
+                data[i] = original_data[indexer].mean(axis=0)
                 i += 1
 
-        return data
+        index = list(product(times, self.comp))
+        return data, index
 
 
 class FlowStruct3D(FlowStructND):

@@ -52,7 +52,7 @@ class IndexBase(ABC):
             msg = f"Key {key} not present in indexer"
             raise KeyError(msg)
 
-        self._indices.remove(key)
+        self._indices.remove(self._item_handler(key))
         self._updated = False
 
     @abstractmethod

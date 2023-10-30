@@ -1439,7 +1439,6 @@ class FlowStructND_time(FlowStructND):
         else:
             raise NotImplementedError("Window method not implemented")
 
-        print(index)
         return self.from_internal(data, index=index)
 
     def _window_uniform(self, hwidth, **kwargs):

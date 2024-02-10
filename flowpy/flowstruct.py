@@ -1443,18 +1443,24 @@ class FlowStructND_time(FlowStructND):
 
     def _window_uniform(self, hwidth, **kwargs):
         times = self.times
-        if not all(np.diff(times) < hwidth):
-            warnings.warn("All times are not spaced "
-                          f"smaller than hwidth ({hwidth})",
-                          stacklevel=find_stack_level())
+        if hasattr(hwidth,'__len__'):
+            if len(hwidth) != len(times):
+                raise ValueError("Invalid length of hwidths")
+        else:
+            if not all(np.diff(times) < hwidth):
+                warnings.warn("All times are not spaced "
+                            f"smaller than hwidth ({hwidth})",
+                            stacklevel=find_stack_level())
 
         shape = (len(self.index), *self.shape)
         data = np.zeros(shape, dtype=self.dtype)
         original_data = self.values
 
         i = 0
-        for time in times:
-            all_times = list(times[np.abs(times-float(time)) <= hwidth])
+        for j, time in enumerate(times):
+            
+            hwidth_val = hwidth[j] if hasattr(hwidth,'__len__') else hwidth
+            all_times = list(times[np.abs(times-float(time)) <= hwidth_val])
             for comp in self.comp:
                 indices = product(all_times, [comp])
                 indexer = [self._indexer.get_loc(index) for index in indices]

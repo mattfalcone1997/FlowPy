@@ -2,4 +2,4 @@ build/*
 *.egg-info
 flowpy/_libs/*.c
 .vscode/
-
+**/__pycache__
